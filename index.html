@@ -365,6 +365,36 @@ header {
 }
 .filter-btn.active { border-color: var(--border2); color: var(--text); background: var(--bg3); }
 
+.export-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border: 0.5px solid rgba(41,121,255,0.4);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--blue-bg);
+  color: var(--blue);
+  transition: all 0.15s;
+}
+.export-btn:hover { background: rgba(41,121,255,0.18); }
+.import-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--bg2);
+  color: var(--text3);
+  transition: all 0.15s;
+}
+.import-btn:hover { color: var(--text2); border-color: var(--border2); }
 .toast {
   position: fixed;
   bottom: 2rem;
@@ -398,7 +428,12 @@ header {
 <div class="app">
   <header>
     <div class="logo">TRADE<span>/</span>LOG</div>
-    <div class="header-date" id="header-date"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="import-btn" onclick="document.getElementById('import-input').click()">↑ Import</button>
+      <input type="file" id="import-input" accept=".csv" style="display:none" onchange="importCSV(event)">
+      <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
+      <div class="header-date" id="header-date"></div>
+    </div>
   </header>
 
   <div class="tabs">
@@ -559,6 +594,82 @@ document.querySelectorAll('.toggle-btns').forEach(container => {
     };
   });
 });
+
+function exportCSV(){
+  if(!trades.length){ showToast('No trades to export'); return; }
+  const headers = [
+    'id','date','time','account','entry','exit','pnl','contracts','result',
+    'htf','ltf',
+    'rating_sleep','rating_food','rating_emotion','rating_prep',
+    'fomo','sober','rushed','revenge','revenge_detail',
+    'emotion_before','emotion_during','emotion_after'
+  ];
+  const escape = v => {
+    if(v===null||v===undefined) return '';
+    const s = String(v);
+    if(s.includes(',')||s.includes('"')||s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"';
+    return s;
+  };
+  const rows = trades.map(t=>[
+    t.id, t.date, t.time, t.account, t.entry, t.exit, t.pnl, t.contracts, t.result,
+    t.htf, t.ltf,
+    t.ratings.sleep, t.ratings.food, t.ratings.emotion, t.ratings.prep,
+    t.toggles.fomo, t.toggles.sober, t.toggles.rushed, t.toggles.revenge, t.revengeText,
+    t.before, t.during, t.after
+  ].map(escape).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tradelog_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported ✓');
+}
+
+function importCSV(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const lines = ev.target.result.split('\n').filter(l=>l.trim());
+      const headers = lines[0].split(',');
+      const imported = lines.slice(1).map(line=>{
+        const vals = [];
+        let cur='', inQ=false;
+        for(let i=0;i<line.length;i++){
+          if(line[i]==='"'){ inQ=!inQ; }
+          else if(line[i]===','&&!inQ){ vals.push(cur); cur=''; }
+          else cur+=line[i];
+        }
+        vals.push(cur);
+        const get = k => vals[headers.indexOf(k)]||'';
+        return {
+          id: parseInt(get('id'))||Date.now(),
+          date: get('date'), time: get('time'), account: get('account'),
+          entry: get('entry'), exit: get('exit'),
+          pnl: parseFloat(get('pnl'))||0,
+          contracts: get('contracts'), result: get('result'),
+          htf: get('htf'), ltf: get('ltf'),
+          ratings: {sleep:parseInt(get('rating_sleep'))||0, food:parseInt(get('rating_food'))||0, emotion:parseInt(get('rating_emotion'))||0, prep:parseInt(get('rating_prep'))||0},
+          toggles: {fomo:get('fomo')||null, sober:get('sober')||null, rushed:get('rushed')||null, revenge:get('revenge')||null},
+          revengeText: get('revenge_detail'),
+          before: get('emotion_before'), during: get('emotion_during'), after: get('emotion_after')
+        };
+      }).filter(t=>t.date);
+      if(!imported.length){ showToast('No valid trades found'); return; }
+      const existing = trades.filter(t=>!imported.find(i=>i.id===t.id));
+      trades = [...imported, ...existing].sort((a,b)=>b.id-a.id);
+      localStorage.setItem('tradelog_v1', JSON.stringify(trades));
+      renderHistory(); renderWeekly();
+      showToast(`Imported ${imported.length} trades ✓`);
+    }catch(err){ showToast('Import failed — check file format'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
 
 function loadTrades(){
   try{ trades = JSON.parse(localStorage.getItem('tradelog_v1')||'[]'); }
