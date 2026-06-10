@@ -298,6 +298,76 @@ header {
   transition: all 0.1s;
 }
 .delete-btn:hover { color: var(--red); border-color: rgba(255,61,61,0.3); background: var(--red-bg); }
+.edit-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  cursor: pointer;
+  background: none;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  transition: all 0.1s;
+}
+.edit-btn:hover { color: var(--blue); border-color: rgba(41,121,255,0.3); background: var(--blue-bg); }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 200;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 700px;
+  position: relative;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 0.5px solid var(--border);
+}
+.modal-title { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+.modal-close {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--text3);
+  cursor: pointer;
+  background: none;
+  border: none;
+  line-height: 1;
+  transition: color 0.1s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-save-btn {
+  width: 100%;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 0.5px solid rgba(0,200,83,0.4);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--green-bg);
+  color: var(--green);
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+.modal-save-btn:hover { background: rgba(0,200,83,0.18); }
 
 .empty {
   text-align: center;
@@ -440,6 +510,7 @@ header {
     <button class="tab active" onclick="showTab('log')">Log trade</button>
     <button class="tab" onclick="showTab('history')">History</button>
     <button class="tab" onclick="showTab('weekly')">Weekly</button>
+    <button class="tab" onclick="showTab('settings')">Settings</button>
   </div>
 
   <!-- LOG TRADE -->
@@ -552,6 +623,90 @@ header {
   <!-- WEEKLY -->
   <div id="tab-weekly" style="display:none">
     <div id="weekly-content"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" style="display:none">
+    <div class="section">
+      <div class="section-label">Account names</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.7">Customize your account labels to reflect their current status. These names appear everywhere in the journal.</p>
+      <div id="account-settings-list"></div>
+      <button class="save-btn" onclick="saveAccountNames()" style="margin-top:4px">↳ Save account names</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit trade</span>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <input type="hidden" id="e-id">
+    <div class="section">
+      <div class="section-label">Trade details</div>
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field"><label>Date</label><input type="date" id="e-date"></div>
+        <div class="field"><label>Entry time</label><input type="time" id="e-time"></div>
+        <div class="field"><label>Account</label>
+          <select id="e-account">
+            <option value="A">Account A — qualified</option>
+            <option value="B">Account B — eval</option>
+            <option value="C">Account C — eval</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field"><label>Entry price</label><input type="number" id="e-entry" step="0.1"></div>
+        <div class="field"><label>Exit price</label><input type="number" id="e-exit" step="0.1"></div>
+        <div class="field"><label>P&L ($)</label><input type="number" id="e-pnl" step="0.01"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Contracts</label><input type="number" id="e-contracts" min="1"></div>
+        <div class="field"><label>Result</label>
+          <select id="e-result"><option value="win">Win</option><option value="loss">Loss</option><option value="breakeven">Breakeven</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Higher timeframe analysis</div>
+      <div class="field"><label>Broad directional bias</label><textarea id="e-htf"></textarea></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Low timeframe confluence</div>
+      <div class="field"><label>Specific technical reason</label><textarea id="e-ltf"></textarea></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Psychology ratings</div>
+      <div class="rating-group">
+        <div class="rating-row"><span class="rating-row-label">Sleep quality</span><div class="stars e-stars" data-key="sleep"></div></div>
+        <div class="rating-row"><span class="rating-row-label">Food / energy</span><div class="stars e-stars" data-key="food"></div></div>
+        <div class="rating-row"><span class="rating-row-label">Emotional state</span><div class="stars e-stars" data-key="emotion"></div></div>
+        <div class="rating-row"><span class="rating-row-label">Preparation level</span><div class="stars e-stars" data-key="prep"></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Session flags</div>
+      <div class="toggle-group">
+        <div class="toggle-row"><span class="toggle-row-label">FOMO present?</span><div class="toggle-btns e-toggles" data-key="fomo"><button class="tog" data-val="yes">Yes</button><button class="tog" data-val="no">No</button></div></div>
+        <div class="toggle-row"><span class="toggle-row-label">Sober?</span><div class="toggle-btns e-toggles" data-key="sober"><button class="tog" data-val="yes">Yes</button><button class="tog" data-val="no">No</button></div></div>
+        <div class="toggle-row"><span class="toggle-row-label">Rushed entry?</span><div class="toggle-btns e-toggles" data-key="rushed"><button class="tog" data-val="yes">Yes</button><button class="tog" data-val="no">No</button></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Emotions</div>
+      <div class="field" style="margin-bottom:12px"><label>Before trade</label><textarea id="e-before"></textarea></div>
+      <div class="field" style="margin-bottom:12px"><label>During trade</label><textarea id="e-during"></textarea></div>
+      <div class="field"><label>After trade</label><textarea id="e-after"></textarea></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Revenge trading</div>
+      <div class="toggle-group">
+        <div class="toggle-row"><span class="toggle-row-label">Did you revenge trade?</span><div class="toggle-btns e-toggles" data-key="revenge"><button class="tog" data-val="yes">Yes</button><button class="tog" data-val="no">No</button></div></div>
+      </div>
+      <div class="field" id="e-revenge-detail" style="display:none;margin-top:10px"><label>What triggered it?</label><textarea id="e-revenge-text"></textarea></div>
+    </div>
+    <button class="modal-save-btn" onclick="saveEdit()">↳ Save changes</button>
   </div>
 </div>
 
@@ -671,6 +826,117 @@ function importCSV(e){
   e.target.value='';
 }
 
+// Edit modal state
+const eRatings = {sleep:0,food:0,emotion:0,prep:0};
+const eToggles = {fomo:null,sober:null,rushed:null,revenge:null};
+
+document.querySelectorAll('.e-stars').forEach(container => {
+  const key = container.dataset.key;
+  for(let i=1;i<=5;i++){
+    const s = document.createElement('button');
+    s.className='star'; s.textContent=i; s.dataset.val=i;
+    s.onclick=()=>{
+      eRatings[key]=i;
+      container.querySelectorAll('.star').forEach((x,idx)=>x.classList.toggle('on',idx<i));
+    };
+    container.appendChild(s);
+  }
+});
+
+document.querySelectorAll('.e-toggles').forEach(container => {
+  const key = container.dataset.key;
+  container.querySelectorAll('.tog').forEach(btn => {
+    btn.onclick = () => {
+      eToggles[key] = btn.dataset.val;
+      container.querySelectorAll('.tog').forEach(b => {
+        b.className = 'tog';
+        if(b===btn) b.classList.add(btn.dataset.val==='yes'?'on-yes':'on-no');
+      });
+      if(key==='revenge'){
+        document.getElementById('e-revenge-detail').style.display = btn.dataset.val==='yes'?'block':'none';
+      }
+    };
+  });
+});
+
+function openEdit(id){
+  const t = trades.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('e-id').value = t.id;
+  document.getElementById('e-date').value = t.date||'';
+  document.getElementById('e-time').value = t.time||'';
+  document.getElementById('e-account').value = t.account||'A';
+  document.getElementById('e-entry').value = t.entry||'';
+  document.getElementById('e-exit').value = t.exit||'';
+  document.getElementById('e-pnl').value = t.pnl||'';
+  document.getElementById('e-contracts').value = t.contracts||'3';
+  document.getElementById('e-result').value = t.result||'win';
+  document.getElementById('e-htf').value = t.htf||'';
+  document.getElementById('e-ltf').value = t.ltf||'';
+  document.getElementById('e-before').value = t.before||'';
+  document.getElementById('e-during').value = t.during||'';
+  document.getElementById('e-after').value = t.after||'';
+  document.getElementById('e-revenge-text').value = t.revengeText||'';
+
+  // Set ratings
+  ['sleep','food','emotion','prep'].forEach(k=>{
+    eRatings[k] = t.ratings[k]||0;
+    const container = document.querySelector(`.e-stars[data-key="${k}"]`);
+    if(container) container.querySelectorAll('.star').forEach((s,idx)=>s.classList.toggle('on',idx<eRatings[k]));
+  });
+
+  // Set toggles
+  ['fomo','sober','rushed','revenge'].forEach(k=>{
+    eToggles[k] = t.toggles[k]||null;
+    const container = document.querySelector(`.e-toggles[data-key="${k}"]`);
+    if(container) container.querySelectorAll('.tog').forEach(b=>{
+      b.className='tog';
+      if(b.dataset.val===eToggles[k]) b.classList.add(eToggles[k]==='yes'?'on-yes':'on-no');
+    });
+  });
+  document.getElementById('e-revenge-detail').style.display = t.toggles.revenge==='yes'?'block':'none';
+
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEdit(){
+  document.getElementById('edit-modal').classList.remove('open');
+}
+
+function saveEdit(){
+  const id = parseInt(document.getElementById('e-id').value);
+  const idx = trades.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  trades[idx] = {
+    ...trades[idx],
+    date: document.getElementById('e-date').value,
+    time: document.getElementById('e-time').value,
+    account: document.getElementById('e-account').value,
+    entry: document.getElementById('e-entry').value,
+    exit: document.getElementById('e-exit').value,
+    pnl: parseFloat(document.getElementById('e-pnl').value)||0,
+    contracts: document.getElementById('e-contracts').value,
+    result: document.getElementById('e-result').value,
+    htf: document.getElementById('e-htf').value.trim(),
+    ltf: document.getElementById('e-ltf').value.trim(),
+    ratings: {...eRatings},
+    toggles: {...eToggles},
+    before: document.getElementById('e-before').value.trim(),
+    during: document.getElementById('e-during').value.trim(),
+    after: document.getElementById('e-after').value.trim(),
+    revengeText: document.getElementById('e-revenge-text').value.trim()
+  };
+  localStorage.setItem('tradelog_v1', JSON.stringify(trades));
+  renderHistory(); renderWeekly();
+  closeEdit();
+  showToast('Changes saved ✓');
+}
+
+// Close modal on overlay click
+document.getElementById('edit-modal').addEventListener('click', function(e){
+  if(e.target===this) closeEdit();
+});
+
 function loadTrades(){
   try{ trades = JSON.parse(localStorage.getItem('tradelog_v1')||'[]'); }
   catch(e){ trades=[]; }
@@ -766,11 +1032,12 @@ function renderHistory(){
     return `<div class="trade-card">
       <div class="trade-header">
         <div>
-          <div class="trade-meta">${t.date}${t.time?' · '+t.time:''} · ACCT ${t.account}</div>
+          <div class="trade-meta">${t.date}${t.time?' · '+t.time:''} · ${accountNames[t.account]||'ACCT '+t.account}</div>
           ${badges?`<div class="badges">${badges}</div>`:''}
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
           <div class="pnl ${pnlClass}">${pnlAmt}</div>
+          <button class="edit-btn" onclick="openEdit(${t.id})">✎ Edit</button>
           <button class="delete-btn" onclick="deleteTrade(${t.id})">✕</button>
         </div>
       </div>
@@ -880,12 +1147,62 @@ function renderWeekly(){
 }
 
 function showTab(name){
-  ['log','history','weekly'].forEach(t=>{
+  ['log','history','weekly','settings'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = t===name?'block':'none';
   });
   document.querySelectorAll('.tab').forEach((btn,i)=>{
-    btn.classList.toggle('active',['log','history','weekly'][i]===name);
+    btn.classList.toggle('active',['log','history','weekly','settings'][i]===name);
   });
+  if(name==='settings') renderAccountSettings();
+}
+
+// Account names
+let accountNames = {A:'Account A — qualified', B:'Account B — eval', C:'Account C — eval'};
+
+function loadAccountNames(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('account_names_v1')||'null');
+    if(saved) accountNames = saved;
+  }catch(e){}
+  updateAccountSelects();
+}
+
+function updateAccountSelects(){
+  ['f-account','e-account'].forEach(id=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = Object.entries(accountNames).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+    sel.value = current;
+  });
+}
+
+function renderAccountSettings(){
+  const el = document.getElementById('account-settings-list');
+  el.innerHTML = Object.entries(accountNames).map(([k,v])=>`
+    <div class="field" style="margin-bottom:12px">
+      <label>Account ${k}</label>
+      <input type="text" id="acct-name-${k}" value="${v}" placeholder="e.g. Account ${k} — eval">
+    </div>
+  `).join('');
+}
+
+function saveAccountNames(){
+  ['A','B','C'].forEach(k=>{
+    const el = document.getElementById('acct-name-'+k);
+    if(el && el.value.trim()) accountNames[k] = el.value.trim();
+  });
+  localStorage.setItem('account_names_v1', JSON.stringify(accountNames));
+  updateAccountSelects();
+  renderHistory();
+  showToast('Account names saved ✓');
+}
+
+function loadTrades(){
+  try{ trades = JSON.parse(localStorage.getItem('tradelog_v1')||'[]'); }
+  catch(e){ trades=[]; }
+  loadAccountNames();
+  renderHistory(); renderWeekly();
 }
 
 loadTrades();
