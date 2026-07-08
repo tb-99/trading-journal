@@ -912,6 +912,7 @@ function saveEdit(){
     date: document.getElementById('e-date').value,
     time: document.getElementById('e-time').value,
     account: document.getElementById('e-account').value,
+    account_label: accountNames[document.getElementById('e-account').value] || document.getElementById('e-account').value,
     entry: document.getElementById('e-entry').value,
     exit: document.getElementById('e-exit').value,
     pnl: parseFloat(document.getElementById('e-pnl').value)||0,
@@ -940,6 +941,7 @@ document.getElementById('edit-modal').addEventListener('click', function(e){
 function loadTrades(){
   try{ trades = JSON.parse(localStorage.getItem('tradelog_v1')||'[]'); }
   catch(e){ trades=[]; }
+  loadAccountNames();
   renderHistory(); renderWeekly();
 }
 
@@ -949,6 +951,7 @@ function saveTrade(){
     date: document.getElementById('f-date').value,
     time: document.getElementById('f-time').value,
     account: document.getElementById('f-account').value,
+    account_label: accountNames[document.getElementById('f-account').value] || document.getElementById('f-account').value,
     entry: document.getElementById('f-entry').value,
     exit: document.getElementById('f-exit').value,
     pnl: parseFloat(document.getElementById('f-pnl').value)||0,
@@ -1032,7 +1035,7 @@ function renderHistory(){
     return `<div class="trade-card">
       <div class="trade-header">
         <div>
-          <div class="trade-meta">${t.date}${t.time?' · '+t.time:''} · ${accountNames[t.account]||'ACCT '+t.account}</div>
+          <div class="trade-meta">${t.date}${t.time?' · '+t.time:''} · ${t.account_label||accountNames[t.account]||t.account}</div>
           ${badges?`<div class="badges">${badges}</div>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
